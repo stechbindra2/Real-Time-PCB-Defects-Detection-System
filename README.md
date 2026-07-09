@@ -166,11 +166,6 @@ flask
 - If the web app does not load, confirm that Flask is installed and port `5000` is free.
 - If detections are poor, validate image quality, model compatibility, and class mapping.
 
-## Professional Positioning
-
-For a résumé, portfolio, or LinkedIn project section, you can describe this project as:
-
-> Developed a YOLOv8-based PCB defect detection system with desktop and web interfaces for automated identification of manufacturing faults such as open circuits, shorts, mouse bites, and spurious copper.
 
 ## License
 
