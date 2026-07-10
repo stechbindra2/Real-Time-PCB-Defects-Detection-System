@@ -1,80 +1,164 @@
-# PCB Defect Detection System
+# 🔍 PCB Defect Detection System
 
-A professional PCB inspection system that uses **YOLOv8 object detection** to identify common manufacturing defects in printed circuit boards. It is designed for both rapid visual inspection and demonstration-ready deployment through a desktop interface and a browser-based web application.
+**Real-time printed circuit board defect detection powered by YOLOv8 — from published research to production-ready application.**
+
+[![Python](https://img.shields.io/badge/Python-3.7%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![YOLOv8](https://img.shields.io/badge/Model-YOLOv8-00FFFF)](https://github.com/ultralytics/ultralytics)
+[![Flask](https://img.shields.io/badge/Web-Flask-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![IEEE](https://img.shields.io/badge/Published-IEEE%20Xplore-00629B?logo=ieee&logoColor=white)](https://ieeexplore.ieee.org/abstract/document/11241378/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](#license)
+
+📄 **Published Research:** *Real-Time PCB Defect Detection Using YOLOv8* — IEEE Xplore
+🎓 **Author:** Shashikant Kumar Bind · [Google Scholar](https://scholar.google.com/citations?user=16T6AUYAAAAJ&hl=en&authuser=1) · [IEEE Paper](https://ieeexplore.ieee.org/abstract/document/11241378/)
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Published Research](#published-research)
+- [Results](#results)
+- [Defects Detected](#defects-detected)
+- [Highlights](#highlights)
+- [System Architecture](#system-architecture)
+- [Project Structure](#project-structure)
+- [Technology Stack](#technology-stack)
+- [Getting Started](#getting-started)
+- [Running the Desktop Application](#running-the-desktop-application)
+- [Running the Web Application](#running-the-web-application)
+- [Requirements](#requirements)
+- [Roadmap](#roadmap)
+- [Troubleshooting](#troubleshooting)
+- [Citation](#citation)
+- [License](#license)
+- [Author](#author)
+
+---
 
 ## Overview
 
-This project helps automate PCB quality inspection by detecting localized defects directly from board images and returning annotated results for review. It is suitable for academic demonstrations, manufacturing-focused computer vision projects, and practical defect-analysis workflows.
+This project is the applied, deployable counterpart to a peer-reviewed research paper on automated PCB inspection. It uses a **YOLOv8 object detection model** to localize common manufacturing defects directly from PCB images, and ships as two ready-to-use interfaces — a **desktop app** (Tkinter) and a **web app** (Flask) — so the same trained model can be demoed locally or in a browser with zero extra setup.
 
-## Highlights
+It's built for:
 
-- YOLOv8-based object detection pipeline for PCB defect localization.
-- Dual deployment modes: desktop application and web application.
-- Image upload, inference, annotation, and result export workflow.
-- Professional dark and light theme support.
-- Clean interface for demos, internal tools, and project showcases.
+- Quality-control proof-of-concepts for electronics manufacturing
+- Academic demonstrations and research showcases
+- Computer vision portfolio / final-year project use
+- A reference implementation to extend toward factory-floor deployment
+
+## Published Research
+
+This system implements the detection pipeline described in the following peer-reviewed publication:
+
+> **Real-Time PCB Defect Detection Using YOLOv8**
+> Shashikant Kumar Bind, *et al.*
+> IEEE Conference Publication — [IEEE Xplore](https://ieeexplore.ieee.org/abstract/document/11241378/)
+
+The paper details the dataset preparation, YOLOv8 training methodology, and evaluation used to build the `best.pt` model shipped in this repository. Full author profile and publication record: [Google Scholar](https://scholar.google.com/citations?user=16T6AUYAAAAJ&hl=en&authuser=1).
+
+See [Citation](#citation) below for how to cite this work.
+
+## Results
+
+Sample inference results from the trained model — each pair shows the raw uploaded PCB image alongside the model's annotated defect output.
+
+<table>
+<tr>
+<th>Input</th>
+<th>Detected Defects</th>
+</tr>
+<tr>
+<td><img src="static/uploads/5ebfc588-0d5d-4975-8c9f-095e5d2d9238.jpg" width="380"/></td>
+<td><img src="static/results/result_5ebfc588-0d5d-4975-8c9f-095e5d2d9238.jpg" width="380"/></td>
+</tr>
+<tr>
+<td><img src="static/uploads/8e03beca-fa03-4c37-92aa-c64a435ae100.jpg" width="380"/></td>
+<td><img src="static/results/result_8e03beca-fa03-4c37-92aa-c64a435ae100.jpg" width="380"/></td>
+</tr>
+<tr>
+<td><img src="static/uploads/f77adbeb-5e78-4f0f-aee4-5f16476303bd.jpg" width="380"/></td>
+<td><img src="static/results/result_f77adbeb-5e78-4f0f-aee4-5f16476303bd.jpg" width="380"/></td>
+</tr>
+</table>
+
+> **Note:** these images are pulled directly from `static/uploads/` and `static/results/` in this repo. For a cleaner public-facing README, consider copying 3–5 representative pairs into a dedicated `assets/results/` folder with descriptive names (e.g. `sample1_input.jpg` / `sample1_output.jpg`) instead of raw UUID filenames — see [Roadmap](#roadmap).
 
 ## Defects Detected
 
-The trained model is configured to detect the following PCB defect categories:
+The trained model identifies six standard PCB defect categories:
 
-- Missing Hole
-- Mouse Bite
-- Open Circuit
-- Short
-- Spur
-- Spurious Copper
+| Class | Description |
+|---|---|
+| **Missing Hole** | Absent drill hole where one is required by the design |
+| **Mouse Bite** | Small semicircular notches along the board edge/pad |
+| **Open Circuit** | Break in a copper trace that interrupts conductivity |
+| **Short** | Unintended contact between two conductive paths |
+| **Spur** | Excess copper protruding from a trace |
+| **Spurious Copper** | Unwanted copper deposits elsewhere on the board |
+
+## Highlights
+
+- YOLOv8-based object detection pipeline for PCB defect localization
+- Dual deployment: desktop application and web application, sharing one trained model
+- Full image upload → inference → annotation → export workflow
+- Professional dark/light theme support
+- Grounded in peer-reviewed, IEEE-published research
 
 ## System Architecture
 
-The system is organized into two user-facing applications that share the same trained YOLO model:
+| Component | File | Description |
+|---|---|---|
+| Desktop App | `yolo_gui.py` | Tkinter-based GUI for local, offline testing |
+| Web App | `app.py` | Flask-based browser interface for demos and remote access |
+| Model | `best.pt` | Trained YOLOv8 weights used for inference |
 
-1. **Desktop App (`yolo_gui.py`)**  
-   Built with Tkinter for local execution and quick offline testing.
-2. **Web App (`app.py`)**  
-   Built with Flask for browser-based access and easier demonstrations.
-3. **Model File (`best.pt`)**  
-   Contains the trained YOLOv8 weights used during inference.
+**Workflow:**
 
-## Core Workflow
-
-1. User selects or uploads a PCB image.
-2. The application loads the `best.pt` model.
-3. YOLOv8 performs object detection on the input image.
-4. Detected defects are rendered on the image with visual annotations.
-5. The user reviews the results and saves the annotated output if needed.
+1. User selects or uploads a PCB image
+2. The application loads `best.pt`
+3. YOLOv8 runs object detection on the input image
+4. Detected defects are drawn as annotated bounding boxes
+5. The user reviews and optionally exports the annotated result
 
 ## Project Structure
 
 ```text
 project-root/
-├── app.py                  # Flask web application
-├── yolo_gui.py             # Tkinter desktop application
-├── best.pt                 # Trained YOLOv8 model weights
-├── requirements.txt        # Python dependencies
-├── templates/              # HTML templates for the web app
-├── static/                 # CSS, JavaScript, images, and assets
-└── README.md               # Project documentation
+├── app.py                     # Flask web application
+├── yolo_gui.py                 # Tkinter desktop application
+├── best.pt                     # Trained YOLOv8 model weights
+├── requirements.txt            # Python dependencies
+├── README.md                   # Project documentation
+├── Report.md                   # Project/technical report
+├── PCB_defect_detection_with_YOLOv8.ipynb   # Training notebook
+├── templates/
+│   ├── index.html
+│   └── about.html
+└── static/
+    ├── css/
+    ├── js/
+    ├── uploads/                 # Original user-uploaded PCB images
+    └── results/                 # Annotated inference outputs
 ```
 
 ## Technology Stack
 
-- **Python** for the application logic.
-- **Ultralytics YOLOv8** for defect detection.
-- **OpenCV** for image handling and annotation workflows.
-- **NumPy** for numerical operations.
-- **Pillow** for image processing and GUI compatibility.
-- **Flask** for the web interface.
-- **Tkinter** for the desktop interface.
+- **Python** — application logic
+- **Ultralytics YOLOv8** — defect detection model
+- **OpenCV** — image handling and annotation
+- **NumPy** — numerical operations
+- **Pillow** — image processing / GUI compatibility
+- **Flask** — web interface
+- **Tkinter** — desktop interface
 
-## Prerequisites
+## Getting Started
 
-Before running the project, ensure the following are installed:
+### Prerequisites
 
-- Python 3.7 or newer
-- pip package manager
+- Python 3.7+
+- pip
 
-## Installation
+### Installation
 
 ```bash
 git clone <repository-url>
@@ -82,7 +166,7 @@ cd yulo
 pip install -r requirements.txt
 ```
 
-Then place the trained model file below in the project root:
+Place the trained model weights in the project root:
 
 ```text
 best.pt
@@ -94,13 +178,11 @@ best.pt
 python yolo_gui.py
 ```
 
-### Desktop Usage
-
-- Click **Select Image** to load a PCB image.
-- Click **Detect Defects** to run inference.
-- Review the annotated output in the results area.
-- Click **Save Results** to export the processed image.
-- Click **Clear** to reset the session.
+1. Click **Select Image** to load a PCB image
+2. Click **Detect Defects** to run inference
+3. Review the annotated output
+4. Click **Save Results** to export
+5. Click **Clear** to reset the session
 
 ## Running the Web Application
 
@@ -108,45 +190,19 @@ python yolo_gui.py
 python app.py
 ```
 
-Open the application in your browser:
+Open in your browser:
 
 ```text
 http://127.0.0.1:5000/
 ```
 
-### Web Usage
-
-- Upload a PCB image using file selection or drag-and-drop.
-- Start detection with the **Detect Defects** action.
-- Inspect highlighted defect regions in the output preview.
-- Download the annotated result image.
-- Start a fresh session with **New Detection**.
-
-## Recommended Improvements
-
-To make the project stronger for internships, GitHub, research demos, or startup-style presentations, consider adding:
-
-- Confidence score display for each predicted defect.
-- Per-class defect counts in the UI.
-- Batch inspection for multiple PCB images.
-- Inference timing and performance metrics.
-- Upload validation and error-state handling.
-- Model/version metadata in the interface.
-- Sample test images for one-click demonstration.
-- Docker support for reproducible deployment.
-- API endpoints for integration with factory systems.
-
-## Example Use Cases
-
-- Academic major project or final-year demonstration.
-- Computer vision portfolio project.
-- Prototype for smart manufacturing quality inspection.
-- Industrial defect-monitoring proof of concept.
-- Dataset and model evaluation interface for PCB research.
+1. Upload a PCB image (file picker or drag-and-drop)
+2. Run **Detect Defects**
+3. Inspect the highlighted defect regions
+4. Download the annotated result
+5. Start a new session with **New Detection**
 
 ## Requirements
-
-A typical `requirements.txt` may include:
 
 ```text
 ultralytics
@@ -156,17 +212,57 @@ numpy
 flask
 ```
 
-> `tkinter` is usually bundled with standard Python installations on many systems, but availability can vary by platform.
+> `tkinter` is typically bundled with standard Python installs, but availability varies by platform.
+
+## Roadmap
+
+Planned improvements to strengthen this project for research demos, internships, and startup-style presentations:
+
+- [ ] Confidence score display per predicted defect
+- [ ] Per-class defect counts in the UI
+- [ ] Batch inspection for multiple PCB images
+- [ ] Inference timing / performance metrics panel
+- [ ] Upload validation and error-state handling
+- [ ] Model/version metadata in the interface
+- [ ] Curated sample test images for one-click demos
+- [ ] Docker support for reproducible deployment
+- [ ] REST API endpoints for factory-system integration
+- [ ] Move sample results into `assets/results/` with descriptive filenames
 
 ## Troubleshooting
 
-- Ensure `best.pt` is present in the root folder before starting inference.
-- Verify that all dependencies are installed in the active Python environment.
-- If the GUI does not open, check whether Tkinter is available in your Python installation.
-- If the web app does not load, confirm that Flask is installed and port `5000` is free.
-- If detections are poor, validate image quality, model compatibility, and class mapping.
+| Issue | Fix |
+|---|---|
+| Inference fails to start | Ensure `best.pt` is present in the project root |
+| Import errors | Verify all dependencies from `requirements.txt` are installed in the active environment |
+| GUI won't open | Check that Tkinter is available in your Python installation |
+| Web app won't load | Confirm Flask is installed and port `5000` is free |
+| Poor detections | Check image quality, model compatibility, and class mapping |
 
+## Citation
+
+If you use this work, please cite the associated IEEE publication:
+
+```bibtex
+@inproceedings{bind_pcb_yolov8,
+  author  = {Bind, Shashikant Kumar},
+  title   = {Real-Time PCB Defect Detection Using YOLOv8},
+  booktitle = {IEEE Conference Publication},
+  year    = {2025},
+  url     = {https://ieeexplore.ieee.org/abstract/document/11241378/}
+}
+```
+
+> Replace `booktitle`, exact page numbers, and DOI with the final published details from the [IEEE Xplore record](https://ieeexplore.ieee.org/abstract/document/11241378/) — IEEE Xplore provides a ready-made citation export (BibTeX/EndNote/plain text) via the "Cite This" button on the paper page.
 
 ## License
 
-Add your preferred license here, such as MIT, Apache-2.0, or a custom academic/research license.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details. *(Swap in your preferred license — Apache-2.0 or an academic/research license also fit well here.)*
+
+## Author
+
+**Shashikant Kumar Bind**
+B.Tech, Electronics & Communication Engineering (AI/ML) · BS Data Science & Applications, IIT Madras
+
+- 🎓 Google Scholar: [scholar.google.com/citations?user=16T6AUYAAAAJ](https://scholar.google.com/citations?user=16T6AUYAAAAJ&hl=en&authuser=1)
+- 📄 IEEE Xplore: [Real-Time PCB Defect Detection Using YOLOv8](https://ieeexplore.ieee.org/abstract/document/11241378/)
