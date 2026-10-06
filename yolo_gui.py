@@ -1,12 +1,10 @@
 import tkinter as tk
 from tkinter import filedialog, ttk, messagebox
-from PIL import Image, ImageTk
-import cv2
+from PIL import Image, ImageTk, ImageOps
 import os
 import threading
-from ultralytics import YOLO
-import time
-import numpy as np
+from pcb_detection.inference import Detector
+from pcb_detection import ROOT
 
 class PCBDefectDetectionApp:
     def __init__(self, root):
@@ -43,14 +41,13 @@ class PCBDefectDetectionApp:
         }
         self.current_theme = "light"
         
-        # Load model
-        try:
-            self.model = YOLO("best.pt")
-        except Exception as e:
-            messagebox.showerror("Model Loading Error", f"Failed to load the model: {str(e)}")
-            self.root.quit()
-            return
-        
+        self.detector = Detector(os.getenv("PCB_MODEL_PATH", str(ROOT / "best.pt")),
+                                 os.getenv("PCB_CONFIDENCE", "0.25"),
+                                 os.getenv("PCB_DEVICE", "cpu"))
+        self.pending_result = None
+        self.pending_error = None
+        self.running = False
+
         # Variables
         self.current_image_path = None
         self.original_image = None
@@ -297,11 +294,15 @@ class PCBDefectDetectionApp:
             ]
         )
         if file_path:
-            self.current_image_path = file_path
             self.status_var.set(f"Image selected: {os.path.basename(file_path)}")
             
             try:
-                self.original_image = Image.open(file_path)
+                with Image.open(file_path) as image:
+                    self.original_image = ImageOps.exif_transpose(image).convert("RGB")
+                self.current_image_path = file_path
+                self.result_image = None
+                self.detection_results = None
+                self.save_btn.config(state=tk.DISABLED)
                 self.update_image_display()
                 self.detect_btn.config(state=tk.NORMAL)
                 self.clear_btn.config(state=tk.NORMAL)
@@ -330,8 +331,8 @@ class PCBDefectDetectionApp:
         
         img_width, img_height = display_image.size
         scale = min(canvas_width/img_width, canvas_height/img_height)
-        new_width = int(img_width * scale)
-        new_height = int(img_height * scale)
+        new_width = max(1, int(img_width * scale))
+        new_height = max(1, int(img_height * scale))
         
         # Resize image to fit canvas
         self.display_image = display_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
@@ -346,7 +347,7 @@ class PCBDefectDetectionApp:
         )
     
     def run_detection(self):
-        if not self.current_image_path:
+        if not self.current_image_path or self.running:
             return
             
         # Start progress indication
@@ -355,57 +356,46 @@ class PCBDefectDetectionApp:
         self.progress_bar.start(10)
         self.detect_btn.config(state=tk.DISABLED)
         
+        self.running = True
+        self.select_btn.config(state=tk.DISABLED)
+        self.clear_btn.config(state=tk.DISABLED)
+        self.save_btn.config(state=tk.DISABLED)
+        self.root.after(50, self._poll_detection)
         # Run detection in a separate thread
         threading.Thread(target=self._run_detection_thread, daemon=True).start()
     
     def _run_detection_thread(self):
         try:
-            # Run the detection
-            results = self.model(self.current_image_path)
-            self.detection_results = results[0]
-            
-            # Get the result image with annotations
-            result_img = results[0].plot()
-            self.result_image = Image.fromarray(result_img)
-            
-            # Update UI with results (in the main thread)
-            self.root.after(0, self._update_ui_after_detection)
-        except Exception as e:
-            self.root.after(0, lambda: self._show_error(f"Detection failed: {str(e)}"))
-    
-    def _update_ui_after_detection(self):
-        # Stop progress indication
+            self.pending_result = self.detector.detect(self.current_image_path)
+        except Exception as exc:
+            self.pending_error = str(exc)
+
+    def _poll_detection(self):
+        # Only the main Tk thread reads or changes widgets.
+        if self.pending_result is None and self.pending_error is None:
+            self.root.after(50, self._poll_detection)
+            return
+        self.running = False
+        self.select_btn.config(state=tk.NORMAL)
+        self.clear_btn.config(state=tk.NORMAL)
+        self.detect_btn.config(state=tk.NORMAL)
         self.progress_bar.stop()
         self.progress_bar.pack_forget()
-        self.status_var.set("Detection complete")
-        
-        # Update the image display
+        if self.pending_error is not None:
+            message, self.pending_error = self.pending_error, None
+            self._show_error(message)
+            return
+        self.result_image, self.detection_results = self.pending_result
+        self.pending_result = None
         self.update_image_display()
-        
-        # Update result details
-        if self.detection_results is not None:
-            boxes = self.detection_results.boxes
-            result_text = f"Found {len(boxes)} defect(s)\n\n"
-            
-            # Create detailed results text
-            if len(boxes) > 0:
-                classes = boxes.cls.tolist()
-                confs = boxes.conf.tolist()
-                class_names = self.detection_results.names
-                
-                for i, (cls_id, conf) in enumerate(zip(classes, confs)):
-                    class_name = class_names[int(cls_id)]
-                    result_text += f"Defect {i+1}: {class_name} (Confidence: {conf:.2f})\n"
-            else:
-                result_text += "No defects detected."
-                
-            self.update_results_text(result_text)
-            self.save_btn.config(state=tk.NORMAL)
-        else:
-            self.update_results_text("No detection results available.")
-        
-        self.detect_btn.config(state=tk.NORMAL)
-    
+        details = self.detection_results
+        lines = [details["diagnostic"], f"Inference: {details['inference_ms']:.1f} ms"]
+        for defect in details["detections"]:
+            lines.append(f"{defect['class']}: {defect['confidence']:.1%}")
+        self.update_results_text("\n".join(lines))
+        self.status_var.set("Detection complete")
+        self.save_btn.config(state=tk.NORMAL)
+
     def _show_error(self, message):
         self.progress_bar.stop()
         self.progress_bar.pack_forget()
