@@ -21,6 +21,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    if (!document.getElementById("fileInput")) return;
+
     // File upload functionality
     const fileInput = document.getElementById('fileInput');
     const uploadArea = document.getElementById('uploadArea');
@@ -87,9 +89,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!file) return;
         
         // Check file type
-        const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/bmp'];
         if (!validTypes.includes(file.type)) {
-            showAlert('Please select a valid image file (JPG, JPEG, PNG)');
+            showAlert('Please select a valid image file (JPG, JPEG, PNG, BMP)');
             return;
         }
         
@@ -191,6 +193,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const resultImage = document.getElementById('resultImage');
         resultImage.src = data.result_path + '?t=' + new Date().getTime(); // Add timestamp to prevent caching
         
+        let diagnostics = document.getElementById('inspectionDiagnostics');
+        if (!diagnostics) {
+            diagnostics = document.createElement('p');
+            diagnostics.id = 'inspectionDiagnostics';
+            diagnostics.className = 'small text-muted mt-2';
+            document.getElementById('defectsCount').parentElement.after(diagnostics);
+        }
+        const counts = Object.entries(data.class_counts || {})
+            .map(([name, count]) => `${name}: ${count}`).join(', ');
+        diagnostics.textContent = `${data.diagnostic || ''} Inference: ${data.inference_ms} ms. ${counts}`;
+
         // Set defects count
         const defectsCount = document.getElementById('defectsCount');
         defectsCount.textContent = data.detections_count;
@@ -209,15 +222,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (defect.confidence >= 0.8) badgeClass = 'bg-success';
                 else if (defect.confidence >= 0.5) badgeClass = 'bg-warning';
                 
-                defectItem.innerHTML = `
-                    <div class="defect-name">${defect.class}</div>
-                    <span class="badge ${badgeClass} confidence-badge">${(defect.confidence * 100).toFixed(0)}%</span>
-                `;
-                
+                const name = document.createElement('div');
+                name.className = 'defect-name';
+                name.textContent = defect.class;
+                const confidence = document.createElement('span');
+                confidence.className = `badge ${badgeClass} confidence-badge`;
+                confidence.textContent = `${(defect.confidence * 100).toFixed(0)}%`;
+                defectItem.append(name, confidence);
+
                 defectsList.appendChild(defectItem);
             });
         } else {
-            defectsList.innerHTML = '<div class="text-center py-3">No defects detected</div>';
+            defectsList.innerHTML = '<div class="text-center py-3">No visible defects detected; electrical functionality is unverified.</div>';
         }
         
         // Configure download button
@@ -226,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Create a temporary link and trigger download
             const link = document.createElement('a');
             link.href = data.result_path;
-            link.download = 'pcb_detection_result.jpg';
+            link.download = 'pcb_detection_result.png';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

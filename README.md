@@ -1,12 +1,11 @@
 # 🔍 PCB Defect Detection System
 
-**Real-time printed circuit board defect detection powered by YOLOv8 — from published research to production-ready application.**
+**Real-time printed circuit board defect detection powered by YOLOv8 — from published research to an inspection application.**
 
-[![Python](https://img.shields.io/badge/Python-3.7%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.10–3.13-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![YOLOv8](https://img.shields.io/badge/Model-YOLOv8-00FFFF)](https://github.com/ultralytics/ultralytics)
 [![Flask](https://img.shields.io/badge/Web-Flask-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
 [![IEEE](https://img.shields.io/badge/Published-IEEE%20Xplore-00629B?logo=ieee&logoColor=white)](https://ieeexplore.ieee.org/abstract/document/11241378/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](#license)
 
 📄 **Published Research:** *Real-Time PCB Defect Detection Using YOLOv8* — IEEE Xplore
 🎓 **Author:** Shashikant Kumar Bind · [Google Scholar](https://scholar.google.com/citations?user=16T6AUYAAAAJ&hl=en&authuser=1) · [IEEE Paper](https://ieeexplore.ieee.org/abstract/document/11241378/)
@@ -37,7 +36,7 @@
 
 ## Overview
 
-This project is the applied, deployable counterpart to a peer-reviewed research paper on automated PCB inspection. It uses a **YOLOv8 object detection model** to localize common manufacturing defects directly from PCB images, and ships as two ready-to-use interfaces — a **desktop app** (Tkinter) and a **web app** (Flask) — so the same trained model can be demoed locally or in a browser with zero extra setup.
+This project is the applied, deployable counterpart to a peer-reviewed research paper on automated PCB inspection. It uses a **YOLOv8 object detection model** to localize common manufacturing defects directly from PCB images, and ships as two ready-to-use interfaces — a **desktop app** (Tkinter) and a **web app** (Flask) — so the same trained model can be demoed locally or in a browser after installing dependencies and providing trained weights.
 
 It's built for:
 
@@ -54,7 +53,7 @@ This system implements the detection pipeline described in the following peer-re
 > Shashikant Kumar Bind, *et al.*
 > IEEE Conference Publication — [IEEE Xplore](https://ieeexplore.ieee.org/abstract/document/11241378/)
 
-The paper details the dataset preparation, YOLOv8 training methodology, and evaluation used to build the `best.pt` model shipped in this repository. Full author profile and publication record: [Google Scholar](https://scholar.google.com/citations?user=16T6AUYAAAAJ&hl=en&authuser=1).
+The paper details the dataset preparation, YOLOv8 training methodology, and evaluation used to build the `best.pt` model used by this application. Full author profile and publication record: [Google Scholar](https://scholar.google.com/citations?user=16T6AUYAAAAJ&hl=en&authuser=1).
 
 See [Citation](#citation) below for how to cite this work.
 
@@ -126,7 +125,10 @@ The trained model identifies six standard PCB defect categories:
 project-root/
 ├── app.py                     # Flask web application
 ├── yolo_gui.py                 # Tkinter desktop application
-├── best.pt                     # Trained YOLOv8 model weights
+├── pcb_detection/              # Shared inference and Flask application factory
+├── tests/                      # Model-independent regression tests
+├── docs/OPERATIONS.md           # Deployment, API, and reproducibility guide
+├── best.pt                     # Supply separately; not included in Git
 ├── requirements.txt            # Python dependencies
 ├── README.md                   # Project documentation
 ├── Report.md                   # Project/technical report
@@ -155,18 +157,21 @@ project-root/
 
 ### Prerequisites
 
-- Python 3.7+
+- Python 3.10–3.13 (3.12 recommended)
 - pip
 
 ### Installation
 
 ```bash
-git clone <repository-url>
-cd yulo
-pip install -r requirements.txt
+git clone https://github.com/stechbindra2/Real-Time-PCB-Defects-Detection-System.git
+cd Real-Time-PCB-Defects-Detection-System
+python3.12 -m venv .venv
+# Windows: .venv\Scripts\activate
+source .venv/bin/activate
+pip install -r requirements-inference.txt
 ```
 
-Place the trained model weights in the project root:
+**Weights are not included.** Obtain trusted PCB-trained weights from the author or reproduce training; place them in the project root or set `PCB_MODEL_PATH`:
 
 ```text
 best.pt
@@ -222,7 +227,7 @@ Planned improvements to strengthen this project for research demos, internships,
 - [ ] Per-class defect counts in the UI
 - [ ] Batch inspection for multiple PCB images
 - [ ] Inference timing / performance metrics panel
-- [ ] Upload validation and error-state handling
+- [x] Upload validation and error-state handling
 - [ ] Model/version metadata in the interface
 - [ ] Curated sample test images for one-click demos
 - [ ] Docker support for reproducible deployment
@@ -257,7 +262,7 @@ If you use this work, please cite the associated IEEE publication:
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details. *(Swap in your preferred license — Apache-2.0 or an academic/research license also fit well here.)*
+No LICENSE file is currently provided. Ask the author for licensing terms before redistribution; third-party dependencies and model weights have their own licenses.
 
 ## Author
 
@@ -266,3 +271,25 @@ B.Tech, Electronics & Communication Engineering (AI/ML) · BS Data Science & App
 
 - 🎓 Google Scholar: [scholar.google.com/citations?user=16T6AUYAAAAJ](https://scholar.google.com/citations?user=16T6AUYAAAAJ&hl=en&authuser=1)
 - 📄 IEEE Xplore: [Real-Time PCB Defect Detection Using YOLOv8](https://ieeexplore.ieee.org/abstract/document/11241378/)
+
+
+## Application reliability and validation
+
+Both interfaces use `pcb_detection.inference.Detector`: lazy model loading, serialized
+predictions, RGB-correct annotations, boxes, per-class counts, confidence threshold and
+timing. The Flask factory stores normalized uploads privately, rejects malformed requests
+and path traversal, and provides `/healthz` and `/readyz` diagnostics. The desktop worker
+reports results through a main-thread polling loop and prevents conflicting actions.
+
+A result with zero detections means **no visible defects detected**; it does not prove a
+board is electrically functional. Component drift and hidden defects require electrical
+measurements. This repository is an optical inspection prototype with stronger application
+safeguards; factory deployment still requires hardware/model validation and access controls.
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+See [Operations and API](docs/OPERATIONS.md) for configuration, production serving,
+retention cleanup, model provenance, deployment boundaries and research reproducibility.

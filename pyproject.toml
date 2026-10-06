@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=77,<81"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pcb-defect-detection"
+version = "0.2.0"
+description = "Optical PCB inspection with shared YOLO inference and Flask/Tkinter interfaces"
+requires-python = ">=3.10,<3.14"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+include = ["pcb_detection*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
